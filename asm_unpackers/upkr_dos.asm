@@ -75,15 +75,15 @@ upkr_unpack:
 ;    trashes ax
 upkr_decode_bit:
      push cx
-     cmp  dx, 0x8000
-     jae  .skiploop                          ; TODO: get rid of this extremely stupid loop formulation
+     shr  dx, 1                              ; for the first round, the shr cancels the adc dx, dx and we just check the sign of dx
+     jmp  .looptest
      .bitloop:                               ; while(upkr_state < 32768)
-     bt   [data], si
-     inc  si
-     adc  dx, dx
-     jns  .bitloop
-.skiploop:
-     movzx ax, byte [probs+bx]               ; int prob = upkr_probs[context_index]; TODO: can we assume ch = 0?
+          bt   [data], si
+          inc  si
+          .looptest:
+          adc  dx, dx
+          jns  .bitloop
+     movzx ax, byte [probs+bx]               ; int prob = upkr_probs[context_index]
      push ax                                 ; save prob
      cmp  dl, al                             ; int bit = (upkr_state & 255) < prob ? 1 : 0; (carry = bit)
      pushf                                   ; save bit flags
