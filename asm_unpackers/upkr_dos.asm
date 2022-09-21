@@ -32,15 +32,15 @@ upkr_unpack:
                jnz  .skip_call
                call upkr_decode_bit
                jnc  .skipoffset
-               .skip_call:
-               mov  bl, 1
-               call upkr_decode_length                 ;  offset = upkr_decode_length(257) - 1;
-               dec  cx
-               jnz  .notdone                           ; if(offset == 0)
-               popa
-               ret
-               .notdone:
-               mov  [.mutant], cx
+                    .skip_call:
+                    mov  bl, 1
+                    call upkr_decode_length                 ;  offset = upkr_decode_length(257) - 1;
+                    dec  cx
+                    jnz  .notdone                           ; if(offset == 0)
+                         popa
+                         ret
+                    .notdone:
+                    mov  [.mutant], cx
                .skipoffset:
                mov  bl, 257+64-256                     ; int length = upkr_decode_length(257 + 64);
                call upkr_decode_length
