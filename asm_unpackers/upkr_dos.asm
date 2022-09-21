@@ -26,40 +26,40 @@ upkr_unpack:
      .mainloop:
           xor  bx, bx
           call upkr_decode_bit
-          jnc  .else                              ; if(upkr_decode_bit(0)) {
+          jnc  .else                         ; if(upkr_decode_bit(0)) {
                mov  bh, 1
-               test bp, bp                             ; if(prev_was_match || upkr_decode_bit(256)) {
+               test bp, bp                   ; if(prev_was_match || upkr_decode_bit(256)) {
                jnz  .skip_call
                call upkr_decode_bit
                jnc  .skipoffset
                     .skip_call:
                     mov  bl, 1
-                    call upkr_decode_length                 ;  offset = upkr_decode_length(257) - 1;
+                    call upkr_decode_length  ;  offset = upkr_decode_length(257) - 1;
                     dec  cx
-                    jnz  .notdone                           ; if(offset == 0)
+                    jnz  .notdone            ; if(offset == 0)
                          popa
                          ret
                     .notdone:
                     mov  [.mutant], cx
                .skipoffset:
-               mov  bl, 257+64-256                     ; int length = upkr_decode_length(257 + 64);
+               mov  bl, 257+64-256           ; int length = upkr_decode_length(257 + 64);
                call upkr_decode_length
                push si
                mov  si, di
                sub  si, 0x4242
                .mutant equ $-2
-               rep  movsb                              ; *write_ptr = write_ptr[-offset];
+               rep  movsb                    ; *write_ptr = write_ptr[-offset];
                pop  si
                jmp  .mainloop
           .else:
-               mov  bx, 1                              ; int byte = 1;
+               mov  bx, 1                    ; int byte = 1;
                .byteloop:
-                    call upkr_decode_bit                    ; int bit = upkr_decode_bit(byte);
-                    adc  bl, bl                             ; byte = (byte << 1) + bit;
+                    call upkr_decode_bit     ; int bit = upkr_decode_bit(byte);
+                    adc  bl, bl              ; byte = (byte << 1) + bit;
                     jnc  .byteloop
                xchg ax, bx
                stosb
-               xor  bp, bp                             ;  prev_was_match = 0;
+               xor  bp, bp                   ;  prev_was_match = 0;
                jmp  .mainloop
 
 
@@ -121,8 +121,8 @@ upkr_decode_length:
      xor  cx, cx                             ; int length = 0;
      mov  bp, 1                              ; int bit_pos = 1;
      .loop:
-     call upkr_decode_bit
-     jnc  .end                               ; while(upkr_decode_bit(context_index)) {
+          call upkr_decode_bit
+          jnc  .end                          ; while(upkr_decode_bit(context_index)) {
           inc  bx                            ; context_index++
           call upkr_decode_bit
           jnc  .notlengthbit
