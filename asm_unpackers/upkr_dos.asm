@@ -27,7 +27,7 @@ upkr_unpack:
           xor  bx, bx
           call upkr_decode_bit
           jnc  .else                         ; if(upkr_decode_bit(0)) {
-               mov  bh, 1
+               xchg bh, bl
                test bp, bp                   ; if(prev_was_match || upkr_decode_bit(256)) {
                jnz  .skip_call
                call upkr_decode_bit
@@ -52,9 +52,9 @@ upkr_unpack:
                pop  si
                jmp  .mainloop
           .else:
-               mov  bx, 1                    ; int byte = 1;
                .byteloop:
                     call upkr_decode_bit     ; int bit = upkr_decode_bit(byte);
+                    dec  bx
                     adc  bl, bl              ; byte = (byte << 1) + bit;
                     jnc  .byteloop
                xchg ax, bx
@@ -109,6 +109,7 @@ upkr_decode_bit:
      .bit2:
      mov  [probs+bx], al                     ; upkr_probs[context_index] = tmp;
      pop  cx
+     inc  bx
      ret                                     ; flags = bit
 
 ; parameters:
@@ -123,13 +124,11 @@ upkr_decode_length:
      .loop:
           call upkr_decode_bit
           jnc  .end                          ; while(upkr_decode_bit(context_index)) {
-          inc  bx                            ; context_index++
           call upkr_decode_bit
           jnc  .notlengthbit
           add  cx, bp                        ; length |= bit_pos
           .notlengthbit:
           add  bp, bp                        ; bit_pos <<= 1
-          inc  bx                            ; context_index++
           jmp  .loop
      .end:
      add  cx, bp                             ; length |= bitpos (highest bit)
