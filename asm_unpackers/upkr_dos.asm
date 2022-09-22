@@ -1,7 +1,7 @@
 ; supports only the bitstream data (add -b to command line when packing)
 ; put the packed intro into data.bin
-prog_start     equ 0xC001 ; must end with 0x01
-prog_len       equ 0x30FF ; must end 0xFF
+prog_start     equ 0xC000
+prog_len       equ 0x3100 ; must be divisible by 8
 probs          equ prog_start+prog_len
 
 org prog_start
@@ -11,7 +11,7 @@ entrypoint:    ; this is will be loaded at 0x100, but relocates the code and dat
      pusha
      push si
      mov  di, prog_start
-     mov  ch, prog_len >> 8
+     mov  cx, prog_len
      rep  movsb
      push upkr_unpack
      ret
@@ -22,7 +22,6 @@ upkr_unpack:
      mov  ch, 2                              ; cx = 0x0200
      rep  stosb
      pop  di                                 ; u8* write_ptr = (u8*)destination;
-     inc  si                                 ; upkr_data_ptr = (u8*)compressed_data;
      .mainloop:
           mov  bx, probs
           call upkr_decode_bit
@@ -78,7 +77,7 @@ upkr_decode_bit:
      shr  dx, 1                              ; for the first round, the shr cancels the adc dx, dx and we just check the sign of dx
      jmp  .looptest
      .bitloop:                               ; while(upkr_state < 32768)
-          bt   [data-(prog_len+1+0x100)/8], si
+          bt   [data-(prog_len+0x100)/8], si
           inc  si
           .looptest:
           adc  dx, dx
