@@ -22,7 +22,7 @@ upkr_unpack:
      mov  ch, 2                              ; cx = 0x0200
      rep  stosb
      pop  di                                 ; u8* write_ptr = (u8*)destination;
-     xor  si, si                             ; upkr_data_ptr = (u8*)compressed_data;
+     inc  si                                 ; upkr_data_ptr = (u8*)compressed_data;
      .mainloop:
           mov  bx, probs
           call upkr_decode_bit
@@ -77,7 +77,7 @@ upkr_decode_bit:
      shr  dx, 1                              ; for the first round, the shr cancels the adc dx, dx and we just check the sign of dx
      jmp  .looptest
      .bitloop:                               ; while(upkr_state < 32768)
-          bt   [data], si
+          bt   [data-(prog_len+1+0x100)/8], si
           inc  si
           .looptest:
           adc  dx, dx
