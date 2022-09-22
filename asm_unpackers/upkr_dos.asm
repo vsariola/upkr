@@ -40,14 +40,13 @@ upkr_unpack:
                          popa
                          ret
                     .notdone:
-                    mov  [.mutant], cx
+                    mov  bp, cx
                .skipoffset:
                mov  bl, 128                  ; int length = upkr_decode_length(384);
                call upkr_decode_length
                push si
                mov  si, di
-               sub  si, 0x4242
-               .mutant equ $-2
+               sub  si, bp
                rep  movsb                    ; *write_ptr = write_ptr[-offset];
                pop  si
                jmp  .mainloop
@@ -117,6 +116,7 @@ upkr_decode_bit:
 ;    bp > 0
 ; trashes bl
 upkr_decode_length:
+     push bp
      xor  cx, cx                             ; int length = 0;
      mov  bp, 1                              ; int bit_pos = 1;
      .loop:
@@ -130,6 +130,7 @@ upkr_decode_length:
           jmp  .loop
      .end:
      add  cx, bp                             ; length |= bitpos (highest bit)
+     pop  bp
      ret
 
 data:
