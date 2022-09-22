@@ -23,8 +23,7 @@ upkr_unpack:
                jnc  .skipoffset
                     .skip_call:
                     call upkr_decode_length  ;  offset = upkr_decode_length(258) - 1;
-                    dec  cx
-                    jnz  .notdone            ; if(offset == 0)
+                    loop .notdone            ; if(offset == 0)
                          popa
                          jmp entry
                     .notdone:
