@@ -2,7 +2,7 @@
 ; put the packed intro into data.bin
 prog_start     equ 0xC000
 prog_len       equ 0x3100 ; must be divisible by 8
-probs          equ prog_start+prog_len
+probs          equ prog_start+prog_len ; must be divisible by 256
 
 org prog_start
 
