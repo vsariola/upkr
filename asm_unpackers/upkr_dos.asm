@@ -28,13 +28,13 @@ upkr_unpack:
           call upkr_decode_bit
           jnc  .else                         ; if(upkr_decode_bit(0)) {
                inc  bh
-               test bp, bp                   ; if(prev_was_match || upkr_decode_bit(256)) {
+               test bp, bp                   ; if(prev_was_match || upkr_decode_bit(257)) {
                jnz  .skip_call
                call upkr_decode_bit
                jnc  .skipoffset
                     .skip_call:
                     mov  bl, 2
-                    call upkr_decode_length  ;  offset = upkr_decode_length(257) - 1;
+                    call upkr_decode_length  ;  offset = upkr_decode_length(258) - 1;
                     dec  cx
                     jnz  .notdone            ; if(offset == 0)
                          popa
@@ -42,7 +42,7 @@ upkr_unpack:
                     .notdone:
                     mov  [.mutant], cx
                .skipoffset:
-               mov  bl, 128                  ; int length = upkr_decode_length(257 + 64);
+               mov  bl, 128                  ; int length = upkr_decode_length(384);
                call upkr_decode_length
                push si
                mov  si, di
@@ -135,4 +135,4 @@ upkr_decode_length:
      ret
 
 data:
-    ;incbin "data.bin"
+    incbin "data.bin"
