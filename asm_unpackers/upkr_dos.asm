@@ -1,6 +1,6 @@
 ; supports only the bitstream data (add -b to command line when packing)
 ; put the packed intro into data.bin
-prog_start     equ 0xC000
+prog_start     equ 0xC001 ; must end with 0x01
 prog_len       equ 0x30FF ; must end 0xFF
 probs          equ prog_start+prog_len
 
@@ -24,10 +24,10 @@ upkr_unpack:
      pop  di                                 ; u8* write_ptr = (u8*)destination;
      xor  si, si                             ; upkr_data_ptr = (u8*)compressed_data;
      .mainloop:
-          xor  bx, bx
+          mov  bx, probs
           call upkr_decode_bit
           jnc  .else                         ; if(upkr_decode_bit(0)) {
-               xchg bh, bl
+               mov  bx, probs+256
                test bp, bp                   ; if(prev_was_match || upkr_decode_bit(256)) {
                jnz  .skip_call
                call upkr_decode_bit
@@ -83,7 +83,7 @@ upkr_decode_bit:
           .looptest:
           adc  dx, dx
           jns  .bitloop
-     movzx ax, byte [probs+bx]               ; int prob = upkr_probs[context_index]
+     movzx ax, byte [bx]                     ; int prob = upkr_probs[context_index]
      push ax                                 ; save prob
      cmp  dl, al                             ; int bit = (upkr_state & 255) < prob ? 1 : 0; (carry = bit)
      pushf                                   ; save bit flags
@@ -107,7 +107,7 @@ upkr_decode_bit:
           neg  al                            ;    tmp = 256 - tmp;
           popf
      .bit2:
-     mov  [probs+bx], al                     ; upkr_probs[context_index] = tmp;
+     mov  [bx], al                           ; upkr_probs[context_index] = tmp;
      pop  cx
      inc  bx
      ret                                     ; flags = bit
