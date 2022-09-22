@@ -27,7 +27,7 @@ upkr_unpack:
           mov  bx, probs
           call upkr_decode_bit
           jnc  .else                         ; if(upkr_decode_bit(0)) {
-               inc  bh
+               mov  bh, probs+256 >> 8
                test bp, bp                   ; if(prev_was_match || upkr_decode_bit(257)) {
                jnz  .skip_call
                call upkr_decode_bit
@@ -102,10 +102,8 @@ upkr_decode_bit:
      popf
      pop  cx
      jc   .bit2                              ; (skip if bit)
-          pushf
-          sub  dx, cx                        ;    upkr_state -= prob;
           neg  al                            ;    tmp = 256 - tmp;
-          popf
+          sub  dx, cx                        ;    upkr_state -= prob; note that this will also leave carry always unset, which is what we want
      .bit2:
      mov  [bx], al                           ; upkr_probs[context_index] = tmp;
      pop  cx
