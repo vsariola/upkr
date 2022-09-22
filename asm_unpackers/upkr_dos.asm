@@ -71,6 +71,8 @@ upkr_unpack:
 ;    si = new bit position in input stream
 ;    carry = bit
 ;    trashes ax
+upkr_decode_bit_bxplus1:
+     inc  bx
 upkr_decode_bit:
      push cx
      shr  dx, 1                              ; for the first round, the shr cancels the adc dx, dx and we just check the sign of dx
@@ -118,11 +120,9 @@ upkr_decode_length:
      xor  cx, cx                             ; int length = 0;
      mov  bp, 1                              ; int bit_pos = 1;
      .loop:
-          inc  bx
-          call upkr_decode_bit
+          call upkr_decode_bit_bxplus1
           jnc  .end                          ; while(upkr_decode_bit(context_index)) {
-          inc  bx
-          call upkr_decode_bit
+          call upkr_decode_bit_bxplus1
           jnc  .notlengthbit
           add  cx, bp                        ; length |= bit_pos
           .notlengthbit:
