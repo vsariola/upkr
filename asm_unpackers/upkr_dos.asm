@@ -68,7 +68,7 @@ upkr_unpack:
 ;    dx = state
 ;    si = bit position in input stream
 ; returns:
-;    bx = context_index
+;    bx = context_index+1
 ;    dx = new state
 ;    si = new bit position in input stream
 ;    carry = bit
