@@ -27,8 +27,7 @@ upkr_unpack:
           call upkr_decode_bit
           jnc  .else                         ; if(upkr_decode_bit(0)) {
                mov  bh, probs+256 >> 8
-               test cx, cx                   ; if(prev_was_match || upkr_decode_bit(257)) {
-               jz   .skip_call
+               jcxz .skip_call
                call upkr_decode_bit
                jnc  .skipoffset
                     .skip_call:
