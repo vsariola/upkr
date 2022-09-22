@@ -19,7 +19,7 @@ entrypoint:    ; this is will be loaded at 0x100, but relocates the code and dat
 upkr_unpack:
      xchg ax, dx                             ; upkr_state = 0;
      mov  al, 128                            ; for(int i = 0; i < sizeof(upkr_probs); ++i) upkr_probs[i] = 128;
-     mov  ch, 2                              ; cx = 0x0200
+     mov  ch, 4                              ; cx = 0x0200
      rep  stosb
      pop  di                                 ; u8* write_ptr = (u8*)destination;
      xor  si, si                             ; upkr_data_ptr = (u8*)compressed_data;
@@ -27,13 +27,13 @@ upkr_unpack:
           mov  bx, probs
           call upkr_decode_bit
           jnc  .else                         ; if(upkr_decode_bit(0)) {
-               mov  bx, probs+256
+               inc  bh
                test bp, bp                   ; if(prev_was_match || upkr_decode_bit(256)) {
                jnz  .skip_call
                call upkr_decode_bit
                jnc  .skipoffset
                     .skip_call:
-                    mov  bl, 1
+                    mov  bl, 2
                     call upkr_decode_length  ;  offset = upkr_decode_length(257) - 1;
                     dec  cx
                     jnz  .notdone            ; if(offset == 0)
@@ -42,7 +42,7 @@ upkr_unpack:
                     .notdone:
                     mov  [.mutant], cx
                .skipoffset:
-               mov  bl, 257+64-256           ; int length = upkr_decode_length(257 + 64);
+               mov  bl, 128                  ; int length = upkr_decode_length(257 + 64);
                call upkr_decode_length
                push si
                mov  si, di
@@ -135,4 +135,4 @@ upkr_decode_length:
      ret
 
 data:
-    incbin "data.bin"
+    ;incbin "data.bin"
