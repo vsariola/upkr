@@ -44,8 +44,7 @@ upkr_unpack:
                     jnc  .byteloop
                xchg ax, bx
                stosb
-               inc  cx                       ;  prev_was_match = 0;
-               jmp  .mainloop
+               loop  .mainloop               ;  prev_was_match = 0;
 
 
 ; parameters:
