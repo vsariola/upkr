@@ -64,7 +64,6 @@ upkr_decode_bit:
      inc  dx
      dec  dx ; or whatever other test for the top bit there is
      jns  upkr_load_bit
-     push cx
      movzx ax, byte [bx]                     ; int prob = upkr_probs[context_index]
      push ax                                 ; save prob
      cmp  dl, al                             ; int bit = (upkr_state & 255) < prob ? 1 : 0; (carry = bit)
@@ -72,23 +71,20 @@ upkr_decode_bit:
      jc   .bit                               ; (skip if bit)
           neg  al                            ;   tmp = 256 - tmp;
      .bit:
-     push ax
+     mov  [bx],al
      mul  dh                                 ; upkr_state = tmp * (upkr_state >> 8) + (upkr_state & 255);
      mov  dh, 0
      add  dx, ax
-     pop  cx
-     mov  ax, cx                             ; tmp += (256 - tmp + 8) >> 4;
+     mov  al, [bx]                           ; tmp += (256 - tmp + 8) >> 4;
      neg  al
-     shr  ax, 4
-     adc  ax, cx
+     shr  al, 4
+     adc  [bx], al                           ; upkr_probs[context_index] = tmp;
      popf
-     pop  cx
+     pop  ax
      jc   .bit2                              ; (skip if bit)
-          neg  al                            ;    tmp = 256 - tmp;
-          sub  dx, cx                        ;    upkr_state -= prob; note that this will also leave carry always unset, which is what we want
+          neg  byte [bx]                     ;    tmp = 256 - tmp;
+          sub  dx, ax                        ;    upkr_state -= prob; note that this will also leave carry always unset, which is what we want
      .bit2:
-     mov  [bx], al                           ; upkr_probs[context_index] = tmp;
-     pop  cx
      ret                                     ; flags = bit
 
 ; parameters:
