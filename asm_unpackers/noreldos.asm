@@ -14,6 +14,7 @@ upkr_unpack:
      mov  ax, 0x8080                         ; for(int i = 0; i < sizeof(upkr_probs); ++i) upkr_probs[i] = 128;
      rep  stosw
      push di
+     xor  bp, bp
      .mainloop:
           mov  bx, probs
           call upkr_decode_bit
@@ -27,15 +28,12 @@ upkr_unpack:
                     loop .notdone            ; if(offset == 0)
                          ret
                     .notdone:
-                    mov  bp, cx
+                    mov  si, di
+                    sub  si, cx
                .skipoffset:
                mov  bl, 128                  ; int length = upkr_decode_length(384);
                call upkr_decode_length
-               push si
-               mov  si, di
-               sub  si, bp
                rep  movsb                    ; *write_ptr = write_ptr[-offset];
-               pop  si
                jmp  .mainloop
           .else:
                inc bx
@@ -45,6 +43,7 @@ upkr_unpack:
                     jnc  .byteloop
                xchg ax, bx
                stosb
+               inc   si
                loop  .mainloop               ;  prev_was_match = 0;
 
 
@@ -65,8 +64,8 @@ upkr_decode_bit:
      shr  dx, 1                              ; for the first round, the shr cancels the adc dx, dx and we just check the sign of dx
      jmp  .looptest
      .bitloop:                               ; while(upkr_state < 32768)
-          bt   [compressed_data-0x100/8], si
-          inc  si
+          bt   [compressed_data], bp
+          inc  bp
           .looptest:
           adc  dx, dx
           jns  .bitloop
