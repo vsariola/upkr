@@ -1,26 +1,27 @@
 ; supports only the bitstream data (add -b to command line when packing)
 ; put the packed intro into data.bin
-prog_start     equ 0xC000
-prog_len       equ 0x3100 ; must be divisible by 8
-probs          equ prog_start+prog_len ; must be divisible by 256
+max_len        equ 16384
+prog_start     equ (0x100+max_len+510+relocation-upkr_unpack)
+probs          equ (((prog_start+max_len+510)+255)/256)*256
 
 org prog_start
 
-entrypoint:    ; this is will be loaded at 0x100, but relocates the code and data to prog_start
-     push si   ; si points to 0x100 = start of code, save it and return to it later with ret
+relocation:
+     ; this is will be loaded at 0x100, but relocates the code and data to prog_start
+     ; si points to 0x100 = start of code, save it and return to it later with ret
+     push si
      pusha
      push si
      mov  di, prog_start
-     mov  cx, prog_len
-     rep  movsb
-     push upkr_unpack
-     ret
+     mov  ch, max_len/512
+     rep  movsw
+     jmp si
 
 upkr_unpack:
      xchg ax, bp                             ; position in bitstream = 0
      cwd                                     ; upkr_state = 0;
      mov  al, 128                            ; for(int i = 0; i < sizeof(upkr_probs); ++i) upkr_probs[i] = 128;
-     mov  ch, 2                              ; cx = 0x0200
+     mov  ch, 3                             ; cx = 0x0200 + 256
      rep  stosb
      pop  di                                 ; u8* write_ptr = (u8*)destination;
      .mainloop:
@@ -66,7 +67,7 @@ upkr_unpack:
 ;    si = new bit position in input stream
 ;    carry = bit
 upkr_load_bit:
-     bt   [compressed_data], bp
+     bt   [compressed_data-relocation+prog_start], bp
      inc  bp
      adc  dx, dx
 upkr_decode_bit:
