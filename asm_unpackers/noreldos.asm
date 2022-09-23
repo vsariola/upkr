@@ -9,12 +9,12 @@ org 100h
 
 upkr_unpack:
      pusha
-     xchg ax, dx                             ; upkr_state = 0;
+     xchg ax, bp                             ; position in bitstream = 0
+     cwd                                     ; upkr_state = 0;
      mov  di, probs
      mov  ax, 0x8080                         ; for(int i = 0; i < sizeof(upkr_probs); ++i) upkr_probs[i] = 128;
      rep  stosw
      push di
-     xor  bp, bp
      .mainloop:
           mov  bx, probs
           call upkr_decode_bit

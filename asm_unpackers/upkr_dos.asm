@@ -17,12 +17,12 @@ entrypoint:    ; this is will be loaded at 0x100, but relocates the code and dat
      ret
 
 upkr_unpack:
-     xchg ax, dx                             ; upkr_state = 0;
+     xchg ax, bp                             ; position in bitstream = 0
+     cwd                                     ; upkr_state = 0;
      mov  al, 128                            ; for(int i = 0; i < sizeof(upkr_probs); ++i) upkr_probs[i] = 128;
      mov  ch, 2                              ; cx = 0x0200
      rep  stosb
      pop  di                                 ; u8* write_ptr = (u8*)destination;
-     xor  bp, bp
      .mainloop:
           mov  bx, probs
           call upkr_decode_bit
