@@ -57,10 +57,10 @@ upkr_unpack:
 ;    dx = new state
 ;    si = new bit position in input stream
 ;    carry = bit
-;    trashes ax
 upkr_decode_bit_bxplus1:
      inc  bx
 upkr_decode_bit:
+     push ax
      push cx
      shr  dx, 1                              ; for the first round, the shr cancels the adc dx, dx and we just check the sign of dx
      jmp  .looptest
@@ -94,30 +94,29 @@ upkr_decode_bit:
      .bit2:
      mov  [bx], al                           ; upkr_probs[context_index] = tmp;
      pop  cx
+     pop  ax
      ret                                     ; flags = bit
 
 ; parameters:
 ;    bx = context_index
+;    si = bit position in input stream
 ; returns:
 ;    cx = length
-;    bp > 0
-; trashes bl
+; trashes bl, ax
 upkr_decode_length:
-     push bp
-     xor  cx, cx                             ; int length = 0;
-     mov  bp, 1                              ; int bit_pos = 1;
+     xor  ax, ax                             ; int length = 0;
+     xor  cx, cx
      .loop:
           call upkr_decode_bit_bxplus1
           jnc  .end                          ; while(upkr_decode_bit(context_index)) {
           call upkr_decode_bit_bxplus1
-          jnc  .notlengthbit
-          add  cx, bp                        ; length |= bit_pos
-          .notlengthbit:
-          add  bp, bp                        ; bit_pos <<= 1
+          rcr  ax, 1
+          inc  cx
           jmp  .loop
      .end:
-     add  cx, bp                             ; length |= bitpos (highest bit)
-     pop  bp
+     inc  ax                                 ; length |= highest bit
+     rol  ax, cl
+     xchg  cx, ax
      ret
 
 data:
