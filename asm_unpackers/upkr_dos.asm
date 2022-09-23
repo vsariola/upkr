@@ -73,7 +73,6 @@ upkr_decode_bit:
      inc  dx
      dec  dx ; or whatever other test for the top bit there is
      jns  upkr_load_bit
-     push ax
      push cx
      movzx ax, byte [bx]                     ; int prob = upkr_probs[context_index]
      push ax                                 ; save prob
@@ -99,7 +98,6 @@ upkr_decode_bit:
      .bit2:
      mov  [bx], al                           ; upkr_probs[context_index] = tmp;
      pop  cx
-     pop  ax
      ret                                     ; flags = bit
 
 ; parameters:
@@ -109,20 +107,20 @@ upkr_decode_bit:
 ;    cx = length
 ; trashes bl, ax
 upkr_decode_length:
-     xor  ax, ax                             ; int length = 0;
-     xor  cx, cx
+     mov  cx, 0x8000
      .loop:
           inc  bx
           call upkr_decode_bit
           jnc  .end                          ; while(upkr_decode_bit(context_index)) {
           inc  bx
           call upkr_decode_bit
-          rcr  ax, 1
-          loop .loop
+          rcr  cx, 1
+          jmp  .loop
      .end:
-     inc  ax                                 ; length |= highest bit
-     ror  ax, cl
-     xchg  cx, ax
+     stc
+     .loop2:
+          rcr  cx, 1
+          jnc  .loop2
      ret
 
 compressed_data:
