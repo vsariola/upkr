@@ -1,6 +1,7 @@
 ; supports only the bitstream data (add -b to command line when packing)
 ; put the packed intro into data.bin
 ; the code is not relocated, so the intro must be assembled at entry point i.e. org 3FFEh
+; the first instruction of the packed intro should be popa, to get the register defaults back
 entry     equ 3FFEh
 probs     equ entry - 0x1FE;  must be aligned to 256
 
@@ -12,6 +13,7 @@ upkr_unpack:
      mov  di, probs
      mov  ax, 0x8080                         ; for(int i = 0; i < sizeof(upkr_probs); ++i) upkr_probs[i] = 128;
      rep  stosw
+     push di
      .mainloop:
           mov  bx, probs
           call upkr_decode_bit
@@ -23,8 +25,7 @@ upkr_unpack:
                     .skip_call:
                     call upkr_decode_length  ;  offset = upkr_decode_length(258) - 1;
                     loop .notdone            ; if(offset == 0)
-                         popa
-                         jmp entry
+                         ret
                     .notdone:
                     mov  bp, cx
                .skipoffset:
