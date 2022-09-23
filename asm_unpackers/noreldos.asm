@@ -109,11 +109,10 @@ upkr_decode_length:
           inc  bx
           call upkr_decode_bit
           rcr  ax, 1
-          inc  cx
-          jmp  .loop
+          loop .loop
      .end:
      inc  ax                                 ; length |= highest bit
-     rol  ax, cl
+     ror  ax, cl
      xchg  cx, ax
      ret
 
