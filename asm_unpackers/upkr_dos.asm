@@ -90,11 +90,11 @@ upkr_decode_bit:
      mul  dh                                 ; upkr_state = tmp * (upkr_state >> 8) + (upkr_state & 255);
      mov  dh, 0
      add  dx, ax
-     mov  ax, 256+8                          ; tmp += (256 - tmp + 8) >> 4;
      pop  cx
-     sub  ax, cx
+     mov  ax, cx                             ; tmp += (256 - tmp + 8) >> 4;
+     neg  al
      shr  ax, 4
-     add  ax, cx
+     adc  ax, cx
      popf
      pop  cx
      jc   .bit2                              ; (skip if bit)
