@@ -56,19 +56,16 @@ upkr_unpack:
 ;    dx = new state
 ;    si = new bit position in input stream
 ;    carry = bit
-upkr_decode_bit_bxplus1:
-     inc  bx
+upkr_load_bit:
+     bt   [compressed_data], bp
+     inc  bp
+     adc  dx, dx
 upkr_decode_bit:
+     inc  dx
+     dec  dx ; or whatever other test for the top bit there is
+     jns  upkr_load_bit
      push ax
      push cx
-     shr  dx, 1                              ; for the first round, the shr cancels the adc dx, dx and we just check the sign of dx
-     jmp  .looptest
-     .bitloop:                               ; while(upkr_state < 32768)
-          bt   [compressed_data], bp
-          inc  bp
-          .looptest:
-          adc  dx, dx
-          jns  .bitloop
      movzx ax, byte [bx]                     ; int prob = upkr_probs[context_index]
      push ax                                 ; save prob
      cmp  dl, al                             ; int bit = (upkr_state & 255) < prob ? 1 : 0; (carry = bit)
@@ -106,9 +103,11 @@ upkr_decode_length:
      xor  ax, ax                             ; int length = 0;
      xor  cx, cx
      .loop:
-          call upkr_decode_bit_bxplus1
+          inc  bx
+          call upkr_decode_bit
           jnc  .end                          ; while(upkr_decode_bit(context_index)) {
-          call upkr_decode_bit_bxplus1
+          inc  bx
+          call upkr_decode_bit
           rcr  ax, 1
           inc  cx
           jmp  .loop
