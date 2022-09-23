@@ -120,4 +120,4 @@ upkr_decode_length:
      ret
 
 compressed_data:
-    incbin "foo.bin"
+    incbin "data.bin"
