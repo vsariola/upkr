@@ -18,7 +18,7 @@ upkr_unpack:
           mov  bx, probs
           call upkr_decode_bit
           jnc  .else                         ; if(upkr_decode_bit(0)) {
-               mov  bh, probs+256 >> 8
+               mov  bh, (probs+256)/256
                jcxz   .skip_call             ; if(prev_was_match || upkr_decode_bit(257)) {
                call upkr_decode_bit
                jnc  .skipoffset
@@ -65,7 +65,7 @@ upkr_decode_bit:
      shr  dx, 1                              ; for the first round, the shr cancels the adc dx, dx and we just check the sign of dx
      jmp  .looptest
      .bitloop:                               ; while(upkr_state < 32768)
-          bt   [data-0x100/8], si
+          bt   [compressed_data-0x100/8], si
           inc  si
           .looptest:
           adc  dx, dx
@@ -119,5 +119,5 @@ upkr_decode_length:
      xchg  cx, ax
      ret
 
-data:
-    incbin "data.bin"
+compressed_data:
+    incbin "foo.bin"
