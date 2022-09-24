@@ -1,4 +1,4 @@
-; supports only the bitstream data (add -b to command line when packing)
+; pack your intro using upkr (add --x86 command line argument)
 ; put the packed intro into data.bin
 ; the code is not relocated, so the intro must be assembled at entry point i.e. org 3FFEh
 ; the first instruction of the packed intro should be popa, to get the register defaults back
@@ -18,7 +18,7 @@ upkr_unpack:
      .mainloop:
           mov  bx, probs
           call upkr_decode_bit
-          jnc  .else                         ; if(upkr_decode_bit(0)) {
+          jc   .else                         ; if(upkr_decode_bit(0)) {
                mov  bh, (probs+256)/256
                jcxz   .skip_call             ; if(prev_was_match || upkr_decode_bit(257)) {
                call upkr_decode_bit
@@ -35,10 +35,9 @@ upkr_unpack:
                call upkr_decode_length
                rep  movsb                    ; *write_ptr = write_ptr[-offset];
                jmp  .mainloop
-          .else:
-               inc bx
                .byteloop:
                     call upkr_decode_bit     ; int bit = upkr_decode_bit(byte);
+                    .else:
                     adc  bl, bl              ; byte = (byte << 1) + bit;
                     jnc  .byteloop
                xchg ax, bx
@@ -98,13 +97,12 @@ upkr_decode_length:
      .loop:
           inc  bx
           call upkr_decode_bit
-          jnc  .end                          ; while(upkr_decode_bit(context_index)) {
+          jc   .end                          ; while(upkr_decode_bit(context_index)) {
           inc  bx
           call upkr_decode_bit
           rcr  cx, 1
           jmp  .loop
      .end:
-     stc
      .loop2:
           rcr  cx, 1
           jnc  .loop2
