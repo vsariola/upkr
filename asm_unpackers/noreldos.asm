@@ -2,6 +2,9 @@
 ; put the packed intro into data.bin
 ; the code is not relocated, so the intro must be assembled at entry point i.e. org 3FFEh
 ; the first instruction of the packed intro should be popa, to get the register defaults back
+;
+; if your stub+compressed code is 2k or smaller, you can save 1 byte by putting probs at
+; 0x900 and initializing di with salc; xchg ax, di instead of mov di, probs
 entry     equ 3FFEh
 probs     equ entry - 0x1FE;  must be aligned to 256
 
