@@ -70,14 +70,13 @@ upkr_decode_bit:
      jc   .bit                               ; (skip if bit)
           neg  al                            ;   tmp = 256 - tmp;
      .bit:
-     mov  [bx],al
+     mov  [bx], al                            ; tmp_new = tmp + (256 - tmp + 8) >> 4;
+     neg  byte [bx]
+     shr  byte [bx], 4
+     adc  [bx], al
      mul  dh                                 ; upkr_state = tmp * (upkr_state >> 8) + (upkr_state & 255);
      mov  dh, 0
      add  dx, ax
-     mov  al, [bx]                           ; tmp += (256 - tmp + 8) >> 4;
-     neg  al
-     shr  al, 4
-     adc  [bx], al                           ; upkr_probs[context_index] = tmp;
      popf
      pop  ax
      jc   .bit2                              ; (skip if bit)
