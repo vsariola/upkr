@@ -20,8 +20,8 @@ relocation:
 upkr_unpack:
      xchg ax, bp                             ; position in bitstream = 0
      cwd                                     ; upkr_state = 0;
+     xchg ax, cx
      mov  al, 128                            ; for(int i = 0; i < sizeof(upkr_probs); ++i) upkr_probs[i] = 128;
-     mov  ch, 3                             ; cx = 0x0200 + 256
      rep  stosb
      pop  di                                 ; u8* write_ptr = (u8*)destination;
      .mainloop:
