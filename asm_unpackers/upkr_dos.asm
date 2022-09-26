@@ -1,5 +1,9 @@
 ; pack your intro using upkr (add --x86 --invert-new-offset-bit command line argument)
 ; put the packed intro into data.bin
+;
+; you can remove clc before ret, if your OK with carry being set upon program entry
+;
+; you can also move pusha before push si & have popa as the first operation of the compressed code
 max_len        equ 16384
 prog_start     equ (0x100+max_len+510+relocation-upkr_unpack)
 probs          equ (((prog_start+max_len+510)+255)/256)*256
@@ -37,6 +41,7 @@ upkr_unpack:
                     call upkr_decode_length  ;  offset = upkr_decode_length(258) - 1;
                     loop .notdone            ; if(offset == 0)
                          popa
+                         clc
                          ret
                     .notdone:
                     mov  si, di
