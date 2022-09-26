@@ -1,4 +1,4 @@
-; pack your intro using upkr (add --x86 command line argument)
+; pack your intro using upkr (add --x86 --invert-new-offset-bit command line argument)
 ; put the packed intro into data.bin
 ; the code is not relocated, so the intro must be assembled at entry point i.e. org 3FFEh
 ; the first instruction of the packed intro should be popa, to get the register defaults back

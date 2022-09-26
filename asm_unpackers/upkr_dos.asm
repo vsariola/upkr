@@ -1,4 +1,4 @@
-; pack your intro using upkr (add --x86 command line argument)
+; pack your intro using upkr (add --x86 --invert-new-offset-bit command line argument)
 ; put the packed intro into data.bin
 max_len        equ 16384
 prog_start     equ (0x100+max_len+510+relocation-upkr_unpack)
