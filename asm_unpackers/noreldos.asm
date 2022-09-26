@@ -5,6 +5,17 @@
 ;
 ; if your stub+compressed code is 2k or smaller, you can save 1 byte by putting probs at
 ; 0x900 and initializing di with salc; xchg ax, di instead of mov di, probs
+;
+; if you remove the pusha, then you can assume the registers as follows:
+;    ax = 0x00XX
+;    bx = probs + 0x1XX
+;    cx = 0
+;    dx = (trash)
+;    si = di = right after your program
+;    sp = as it was when the program started
+;    flags = carry is set
+;
+; note that even with the pusha, carry will be set (!) unlike normal dos program
 entry     equ 3FFEh
 probs     equ entry - 0x1FE;  must be aligned to 256
 
@@ -29,10 +40,10 @@ upkr_unpack:
                     .skip_call:
                     stc
                     call upkr_decode_length  ;  offset = upkr_decode_length(258) - 1;
+                    mov  si, di
                     loop .notdone            ; if(offset == 0)
                          ret
                     .notdone:
-                    mov  si, di
                     .sub:
                          dec si
                     loop .sub
