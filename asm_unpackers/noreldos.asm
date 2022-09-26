@@ -25,14 +25,17 @@ upkr_unpack:
                mov  bh, (probs+256)/256
                jcxz   .skip_call             ; if(prev_was_match || upkr_decode_bit(257)) {
                call upkr_decode_bit
-               jnc  .skipoffset
+               jc   .skipoffset
                     .skip_call:
+                    stc
                     call upkr_decode_length  ;  offset = upkr_decode_length(258) - 1;
                     loop .notdone            ; if(offset == 0)
                          ret
                     .notdone:
                     mov  si, di
-                    sub  si, cx
+                    .sub:
+                         dec si
+                    loop .sub
                .skipoffset:
                mov  bl, 128                  ; int length = upkr_decode_length(384);
                call upkr_decode_length
@@ -46,7 +49,8 @@ upkr_unpack:
                xchg ax, bx
                stosb
                inc   si
-               loop  .mainloop               ;  prev_was_match = 0;
+               mov  cl, 1
+               jmp  .mainloop               ;  prev_was_match = 0;
 
 
 ; parameters:
@@ -94,17 +98,14 @@ upkr_decode_bit:
 ; returns:
 ;    cx = length
 ; trashes bl, ax
+upkr_decode_length_loop:
+          inc  bx
+          call upkr_decode_bit
 upkr_decode_length:
-     mov  cx, 0x8000
-     .loop:
-          inc  bx
-          call upkr_decode_bit
-          jc   .end                          ; while(upkr_decode_bit(context_index)) {
-          inc  bx
-          call upkr_decode_bit
           rcr  cx, 1
-          jmp  .loop
-     .end:
+          inc  bx
+          call  upkr_decode_bit
+          jnc  upkr_decode_length_loop ; while(upkr_decode_bit(context_index)) {
      .loop2:
           rcr  cx, 1
           jnc  .loop2
