@@ -8,7 +8,7 @@ max_len        equ 16384
 prog_start     equ (0x100+max_len+510+relocation-upkr_unpack)
 probs          equ (((prog_start+max_len+510)+255)/256)*256
 
-org prog_start
+org 0x100
 
 relocation:
      ; this is will be loaded at 0x100, but relocates the code and data to prog_start
