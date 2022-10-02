@@ -1,67 +1,74 @@
-; pack your intro using upkr (add --x86 --invert-new-offset-bit command line argument)
-; put the packed intro into data.bin
-; the code is not relocated, so the intro must be assembled at entry point i.e. org 3FFEh
-; the first instruction of the packed intro should be popa, to get the register defaults back
+; This is the 16-bit DOS x86 decompression stub for upkr, which decompresses the
+; code starting at address 0x3FFE (or whatever is defined by the entrypoint
+; below). Thus, the packed code needs to be assembled with org 0x3FFE to work.
 ;
-; if your stub+compressed code is 2k or smaller, you can save 1 byte by putting probs at
-; 0x900 and initializing di with salc; xchg ax, di instead of mov di, probs
+; How to use:
+;   1) Put POPA as the first instruction of your compiled code and use org
+;      0x3FFE
+;   2) Pack your intro using upkr into data.bin with the --x86 command line
+;      argument:
+;           $ upkr --x86 intro.com data.bin
+;   2) Compile this .asm file using n asm (or any compatible assembler) e.g.
+;           $ nasm upkr_dos.asm -fbin -o intropck.com
+
+; In specific cases, the unpacker stub can be further optimized to save a byte
+; or two:
+;   1) If your stub+compressed code is 2k or smaller, you can save 1 byte by
+;      putting probs at 0x900 and initializing DI with SALC; XCHG AX, DI instead
+;      of MOV DI, probs
+;   2) If you remove the PUSHA (and POPA in the compressed code), then you can
+;      assume the registers as follows: AX = 0x00XX, BX = probs + 0x1XX, CX = 0
+;      DX = (trash), SI = DI = right after your program, SP = as it was when the
+;      program started, flags = carry set
 ;
-; if you remove the pusha, then you can assume the registers as follows:
-;    ax = 0x00XX
-;    bx = probs + 0x1XX
-;    cx = 0
-;    dx = (trash)
-;    si = di = right after your program
-;    sp = as it was when the program started
-;    flags = carry is set
-;
-; note that even with the pusha, carry will be set (!) unlike normal dos program
+; Note that even with the PUSHA / POPA, carry will be set (!) unlike normal dos
+; program.
+
 entry     equ 3FFEh
-probs     equ entry - 0x1FE;  must be aligned to 256
+probs     equ entry - 0x1FE     ; must be aligned to 256
 
 org 100h
 
 upkr_unpack:
-     pusha
-     xchg ax, bp                             ; position in bitstream = 0
-     cwd                                     ; upkr_state = 0;
-     mov  di, probs
-     mov  ax, 0x8080                         ; for(int i = 0; i < sizeof(upkr_probs); ++i) upkr_probs[i] = 128;
-     rep  stosw
-     push di
-     .mainloop:
-          mov  bx, probs
-          call upkr_decode_bit
-          jc   .else                         ; if(upkr_decode_bit(0)) {
-               mov  bh, (probs+256)/256
-               jcxz   .skip_call             ; if(prev_was_match || upkr_decode_bit(257)) {
-               call upkr_decode_bit
-               jc   .skipoffset
-                    .skip_call:
-                    stc
-                    call upkr_decode_length  ;  offset = upkr_decode_length(258) - 1;
-                    mov  si, di
-                    loop .notdone            ; if(offset == 0)
-                         ret
-                    .notdone:
-                    .sub:
-                         dec si
-                    loop .sub
-               .skipoffset:
-               mov  bl, 128                  ; int length = upkr_decode_length(384);
-               call upkr_decode_length
-               rep  movsb                    ; *write_ptr = write_ptr[-offset];
-               jmp  .mainloop
-               .byteloop:
-                    call upkr_decode_bit     ; int bit = upkr_decode_bit(byte);
-                    .else:
-                    adc  bl, bl              ; byte = (byte << 1) + bit;
-                    jnc  .byteloop
-               xchg ax, bx
-               stosb
-               inc   si
-               mov  cl, 1
-               jmp  .mainloop               ;  prev_was_match = 0;
+    pusha
+    xchg ax, bp                             ; position in bitstream = 0
+    cwd                                     ; upkr_state = 0;
+    mov  di, probs
+    mov  ax, 0x8080                         ; for(int i = 0; i < sizeof(upkr_probs); ++i) upkr_probs[i] = 128;
+    rep  stosw
+    push di
+.mainloop:
+    mov  bx, probs
+    call upkr_decode_bit
+    jc   .else                  ; if(upkr_decode_bit(0)) {
+    mov  bh, (probs+256)/256
+    jcxz   .skip_call           ; if(prev_was_match || upkr_decode_bit(257)) {
+    call upkr_decode_bit
+    jc   .skipoffset
+.skip_call:
+    stc
+    call upkr_decode_length     ;  offset = upkr_decode_length(258) - 1;
+    mov  si, di
+    loop .sub                   ; if(offset == 0)
+    ret
+.sub:
+    dec si
+    loop .sub
+.skipoffset:
+    mov  bl, 128                  ; int length = upkr_decode_length(384);
+    call upkr_decode_length
+    rep  movsb                    ; *write_ptr = write_ptr[-offset];
+    jmp  .mainloop
+.byteloop:
+    call upkr_decode_bit     ; int bit = upkr_decode_bit(byte);
+.else:
+    adc  bl, bl              ; byte = (byte << 1) + bit;
+    jnc  .byteloop
+    xchg ax, bx
+    stosb
+    inc   si
+    mov  cl, 1
+    jmp  .mainloop               ;  prev_was_match = 0;
 
 
 ; parameters:
