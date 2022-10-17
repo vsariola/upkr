@@ -1,3 +1,5 @@
+; Contributions from pestis, TomCat and exoticorn
+;
 ; This is the 16-bit DOS x86 decompression stub for upkr, which decompresses the
 ; code starting at address 0x3FFE (or whatever is defined by the entrypoint
 ; below). Thus, the packed code needs to be assembled with org 0x3FFE to work.
@@ -12,7 +14,7 @@
 ;
 ;   2) Compile this .asm file using nasm (or any compatible assembler) e.g.
 ;
-;           $ nasm upkr_dos.asm -fbin -o intropck.com
+;           $ nasm unpack_x86_16_DOS_no_relocation.asm -fbin -o intropck.com
 ;
 ; In specific cases, the unpacker stub can be further optimized to save a byte
 ; or two:
@@ -32,7 +34,7 @@ probs       equ entry - 0x1FE   ; must be aligned to 256
 org 0x100
 
 
-; Unpacks the code to entry address and runs it when done.
+; This is will be loaded at 0x100, but relocates the code and data to prog_start
 upkr_unpack:
     pusha
     xchg    ax, bp              ; position in bitstream = 0
@@ -75,15 +77,16 @@ upkr_unpack:
     jmp     .mainloop           ;  prev_was_match = 0;
 
 
+; upkr_decode_bit decodes one bit from the rANS entropy encoded bit stream.
 ; parameters:
-;    bx = context_index
-;    dx = state
-;    si = bit position in input stream
+;    bx = memory address of the context probability
+;    dx = decoder state
+;    bp = bit position in input stream
 ; returns:
-;    bx = context_index+1
-;    dx = new state
-;    si = new bit position in input stream
+;    dx = new decoder state
+;    bp = new bit position in input stream
 ;    carry = bit
+; trashes ax
 upkr_load_bit:
     bt      [compressed_data], bp
     inc     bp
@@ -114,11 +117,22 @@ upkr_decode_bit:
 .bit2:
     ret                     ; flags = bit
 
+
+; upkr_decode_number loads a variable length encoded number (up to 16 bits) from
+; the compressed stream. Only numbers 1..65535 can be encoded. If the encoded
+; number has 4 bits and is 1ABC, it is encoded using a kind of an "interleaved
+; elias code": 0A0B0C1. The 1 in the end implies that no more bits are coming.
 ; parameters:
-;    bx = context_index
-;    si = bit position in input stream
+;   cx = must be 0
+;   bx = memory address of the context probability
+;   dx = decoder state
+;   bp = bit position in input stream
+;   carry = must be 1
 ; returns:
-;    cx = length
+;   cx = length
+;   dx = new decoder state
+;   bp = new bit position in input stream
+;   carry = 1
 ; trashes bl, ax
 upkr_decode_number_loop:
     inc     bx
@@ -132,6 +146,7 @@ upkr_decode_number:
     rcr     cx, 1
     jnc     .loop2
     ret
+
 
 compressed_data:
     incbin  "data.bin"

@@ -1,14 +1,20 @@
+; Contributions from pestis, TomCat and exoticorn
+;
 ; This is the 16-bit DOS x86 decompression stub for upkr, which is designed for
-; maximum compatibility: it relocates the compressed data so it can be
-; decompressed starting at the normal .COM starting address. In other words,
-; many of the already existing .COM files should be compressable using this
-; stub.
+; the --no-repeated-offsets option of upkr. The decompression stub is slightly
+; smaller, but the compressed data might be bigger, so you have to test if
+; --no-repeated-offsets pays off in the end. This stub relocates the compressed
+; data so it can be decompressed starting at the normal .COM starting address.
 ;
 ; How to use:
-;   1) Pack your intro using upkr into data.bin with the --x86 command line
-;      argument: $ upkr --x86 intro.com data.bin
-;   2) Compile this .asm file using nasm (or any compatible assembler) e.g. $
-;      nasm upkr_dos.asm -fbin -o intropck.com
+;   1) Pack your intro using upkr into data.bin with the --x86b command line
+;      argument: (notice the --x86b, not --x86!)
+;
+;           $ upkr --x86b intro.com data.bin
+;
+;   2) Compile this .asm file using nasm (or any compatible assembler):
+;
+;           $ nasm unpack_x86_16_DOS_no_repeated_offsets.asm -fbin -o intropck.com
 ;
 ; The packed size of the intro+stub is limited by max_len (see below) bytes.
 ;
@@ -18,11 +24,12 @@
 ;      program entry
 ;   2) You can also move PUSHA before PUSH SI and put POPA as the first
 ;      operation of the compressed code.
-max_len     equ 16384
-prog_start  equ (0x100+max_len+510+relocation-upkr_unpack)
-probs       equ (((prog_start+max_len+510)+255)/256)*256
+max_len        equ 16384
+prog_start     equ (0x100+max_len+510+relocation-upkr_unpack)
+probs          equ (((prog_start+max_len+510)+255)/256)*256
 
 org 0x100
+
 
 ; This is will be loaded at 0x100, but relocates the code and data to prog_start
 relocation:
@@ -35,25 +42,20 @@ relocation:
     jmp     si                  ; jump to relocated upkr_unpack
 
 
-; Unpacks the code to 0x100 and runs it when done.
+; upkr_unpack unpacks the code to 0x100 and runs it when done.
 upkr_unpack:
-    xchg    ax, bp              ; position in input bitstream (bp) = 0
-    cwd                         ; upkr_state (dx) = 0;
-    xchg    ax, cx              ; cx = 0x9XX
+    xchg    ax, bp              ; position in bitstream = 0
+    cwd                         ; upkr_state = 0;
+    xchg    cx, ax              ; cx > 0x0200
     mov     al, 128             ; for(int i = 0; i < sizeof(upkr_probs); ++i) upkr_probs[i] = 128;
     rep     stosb
     pop     di                  ; u8* write_ptr = (u8*)destination;
 .mainloop:
     mov     bx, probs
     call    upkr_decode_bit
-    jc      .else               ; if(upkr_decode_bit(0)) {
-    mov     bh, (probs+256)/256
-    jcxz    .skip_call
-    call    upkr_decode_bit
-    jc      .skipoffset
-.skip_call:
-    stc
-    call    upkr_decode_number  ; offset = upkr_decode_length(258) - 1;
+    jnc     .else               ; if(upkr_decode_bit(0)) {
+    inc     bh
+    call    upkr_decode_number  ;  offset = upkr_decode_number(258) - 1;
     loop    .notdone            ; if(offset == 0)
     popa
     clc
@@ -63,24 +65,22 @@ upkr_unpack:
 .sub:
     dec     si
     loop    .sub
-.skipoffset:
-    mov     bl, 128             ; int length = upkr_decode_length(384);
+    mov     bl, 128             ; int length = upkr_decode_number(384);
     call    upkr_decode_number
     rep     movsb               ; *write_ptr = write_ptr[-offset];
     jmp     .mainloop
+.else:
+    inc     bx
 .byteloop:
     call    upkr_decode_bit     ; int bit = upkr_decode_bit(byte);
-.else:
     adc     bl, bl              ; byte = (byte << 1) + bit;
     jnc     .byteloop
     xchg    ax, bx
     stosb
-    inc     si
-    mov     cl, 1
     jmp     .mainloop           ;  prev_was_match = 0;
 
 
-; upkr_load_bit loads one bit from the rANS entropy encoded bit stream.
+; upkr_decode_bit decodes one bit from the rANS entropy encoded bit stream.
 ; parameters:
 ;    bx = memory address of the context probability
 ;    dx = decoder state
@@ -95,20 +95,20 @@ upkr_load_bit:
     inc     bp
     adc     dx, dx
 upkr_decode_bit:
-    inc     dx              ; inc dx, dec dx is used to test the top (sign) bit of dx
-    dec     dx
+    inc     dx
+    dec     dx              ; or whatever other test for the top bit there is
     jns     upkr_load_bit
-    movzx   ax, byte [bx]   ; u16 prob = upkr_probs[context_index]
-    push    ax              ; save prob, tmp = prob
+    movzx   ax, byte [bx]   ; int prob = upkr_probs[context_index]
+    push    ax              ; save prob
     cmp     dl, al          ; int bit = (upkr_state & 255) < prob ? 1 : 0; (carry = bit)
     pushf                   ; save bit flags
     jc      .bit            ; (skip if bit)
     neg     al              ;   tmp = 256 - tmp;
 .bit:
-    mov     [bx], al        ; upkr_probs[context_index] = tmp + (256 - tmp + 8) >> 4;
+    mov     [bx], al        ; tmp += (256 - tmp + 8) >> 4;
     neg     byte [bx]
-    shr     byte [bx], 4
-    adc     [bx], al
+    shr     byte [bx],4
+    adc     [bx], al        ; upkr_probs[context_index] = tmp;
     mul     dh              ; upkr_state = tmp * (upkr_state >> 8) + (upkr_state & 255);
     mov     dh, 0
     add     dx, ax
@@ -118,7 +118,7 @@ upkr_decode_bit:
     neg     byte [bx]       ;   tmp = 256 - tmp;
     sub     dx, ax          ;   upkr_state -= prob; note that this will also leave carry always unset, which is what we want
 .bit2:
-    ret                     ; return the bit in carry
+    ret                     ; flags = bit
 
 
 ; upkr_decode_number loads a variable length encoded number (up to 16 bits) from
@@ -152,4 +152,4 @@ upkr_decode_number:
 
 
 compressed_data:
-   incbin   "data.bin"
+    incbin "data.bin"
